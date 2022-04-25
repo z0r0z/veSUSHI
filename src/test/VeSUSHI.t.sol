@@ -66,7 +66,7 @@ contract VeSUSHItest is Test {
 
     function testDepositOverBalance() public {
         // Expect the depositSushi() call to revert from underflow
-        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
+        vm.expectRevert(stdError.arithmeticError);
         veSUSHI.depositSushi(1_000_000_000 ether, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 1_000_000 ether);
@@ -90,7 +90,7 @@ contract VeSUSHItest is Test {
 
     function testMintOverBalance() public {
         // Expect the mintVeSushi() call to revert from underflow
-        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
+        vm.expectRevert(stdError.arithmeticError);
         veSUSHI.mintVeSushi(1_000_000_000 ether, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 1_000_000 ether);
