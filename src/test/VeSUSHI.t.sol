@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.13;
 
-import {ERC20, VeSUSHI} from "../VeSUSHI.sol";
-import {MockERC20} from "@solmate/test/utils/mocks/MockERC20.sol";
+import {VeSUSHI} from "../VeSUSHI.sol";
+import {WETH} from "@solmate/tokens/WETH.sol";
+// import {MockBentoBoxV1} from "./utils/mocks/MockBentoBoxV1.sol";
+import {ERC20, MockERC20} from "@solmate/test/utils/mocks/MockERC20.sol";
 
 import "@std/Test.sol";
 
 contract VeSUSHItest is Test {
     using stdStorage for StdStorage;
 
-    VeSUSHI veSUSHI;
+    WETH wETH;
     MockERC20 sushi;
+    VeSUSHI veSUSHI;
+    // MockBentoBoxV1 bento;
 
     event VeSushiDeployed(ERC20 indexed sushi, address veSUSHI);
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
@@ -24,8 +28,10 @@ contract VeSUSHItest is Test {
 
     function setUp() public {
         console.log(unicode"🧪 Testing veSUSHI...");
+        wETH = new WETH();
         sushi = new MockERC20("SushiToken", "SUSHI", 18);
         veSUSHI = new VeSUSHI(sushi);
+        // bento = new MockBentoBoxV1(address(wETH));
         // Mint 1 million SUSHI
         sushi.mint(address(this), 1_000_000 ether);
         // Approve deposit of 1 billion SUSHI
