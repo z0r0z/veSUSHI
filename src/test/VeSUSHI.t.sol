@@ -2,8 +2,6 @@
 pragma solidity 0.8.13;
 
 import {VeSUSHI} from "../VeSUSHI.sol";
-import {WETH} from "@solmate/tokens/WETH.sol";
-// import {MockBentoBoxV1} from "./utils/mocks/MockBentoBoxV1.sol";
 import {ERC20, MockERC20} from "@solmate/test/utils/mocks/MockERC20.sol";
 
 import "@std/Test.sol";
@@ -13,10 +11,8 @@ contract VeSUSHItest is Test {
 
     /// @dev Storage
 
-    WETH wETH;
     MockERC20 sushi;
     VeSUSHI veSUSHI;
-    // MockBentoBoxV1 bento;
 
     uint256 constant bag = 1_000_000 ether;
 
@@ -54,10 +50,8 @@ contract VeSUSHItest is Test {
 
     function setUp() public {
         console.log(unicode"🧪 Testing veSUSHI...");
-        wETH = new WETH();
         sushi = new MockERC20("SushiToken", "SUSHI", 18);
         veSUSHI = new VeSUSHI(sushi);
-        // bento = new MockBentoBoxV1(address(wETH));
         // Mint 1 million SUSHI
         sushi.mint(address(this), bag);
         // Approve deposit of 1 billion SUSHI
@@ -75,17 +69,26 @@ contract VeSUSHItest is Test {
     }
 
     function testMetadata() public {
-        // Setup
-        MockERC20 umai = new MockERC20("SushiToken", "SUSHI", 18);
-        VeSUSHI vlt = new VeSUSHI(umai);
-        // Checks
-        assertEq(vlt.name(), "Vote-escrowed SushiToken");
-        assertEq(vlt.symbol(), "veSUSHI");
-        assertEq(address(vlt.asset()), address(umai));
-        assertEq(vlt.decimals(), 18);
+        assertEq(address(sushi), address(veSUSHI.asset()));
+        assertEq(veSUSHI.name(), "Vote-escrowed SushiToken");
+        assertEq(veSUSHI.symbol(), "veSUSHI");
+        assertEq(veSUSHI.decimals(), 18);
     }
 
     /// @dev Deposits
+
+    function testTotalSupply() public {
+        // Check veSUSHI Supply
+        assertEq(veSUSHI.totalSupply(), 0);
+        // Deposit SUSHI
+        veSUSHI.depositSushi(bag, address(this));
+        // Check veSUSHI Supply (confirm update)
+        assertEq(veSUSHI.totalSupply(), bag);
+        // Withdraw SUSHI
+        veSUSHI.withdrawSushi(bag, address(this), address(this));
+        // Check veSUSHI Supply (confirm update)
+        assertEq(veSUSHI.totalSupply(), 0);
+    }
 
     function testDeposit() public {
         // Expect the Deposit event to be fired
@@ -98,11 +101,13 @@ contract VeSUSHItest is Test {
         assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag);
     }
 
     function testDepositOverBalance() public {
         // Expect the depositSushi() call to revert from underflow
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
         veSUSHI.depositSushi(1_000_000_000 ether, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), bag);
@@ -122,11 +127,13 @@ contract VeSUSHItest is Test {
         assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag);
     }
 
     function testMintOverBalance() public {
         // Expect the mintVeSushi() call to revert from underflow
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
         veSUSHI.mintVeSushi(1_000_000_000 ether, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), bag);
@@ -149,6 +156,8 @@ contract VeSUSHItest is Test {
         assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag);
         // ** WITHDRAW ** //
         veSUSHI.withdrawSushi(bag, address(this), address(this));
         // Check SUSHI balances
@@ -156,6 +165,8 @@ contract VeSUSHItest is Test {
         assertEq(sushi.balanceOf(address(veSUSHI)), 0);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), 0);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), 0);
     }
 
     function testWithdrawOverBalance() public {
@@ -193,6 +204,8 @@ contract VeSUSHItest is Test {
         assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag);
         // ** REDEEM ** //
         veSUSHI.redeemVeSushi(bag, address(this), address(this));
         // Check SUSHI balances
@@ -200,6 +213,8 @@ contract VeSUSHItest is Test {
         assertEq(sushi.balanceOf(address(veSUSHI)), 0);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), 0);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), 0);
     }
 
     function testRedeemOverBalance() public {
@@ -223,5 +238,160 @@ contract VeSUSHItest is Test {
         assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), bag);
+    }
+
+    /// @dev DAO vote tracking
+
+    // Delegation
+
+    function testGetCurrentVotes() public {
+        // Check current votes
+        assertEq(veSUSHI.getCurrentVotes(address(this)), 0);
+        // Deposit SUSHI
+        veSUSHI.depositSushi(bag, address(this));
+        // Check updated votes
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag);
+    }
+
+    function testGetPriorVotes() public {
+        // Move timeline up
+        vm.warp(block.timestamp + 2 days);
+        // Check current (prior) votes
+        assertEq(veSUSHI.getPriorVotes(address(this), block.timestamp - 1 days), 0);
+        // Deposit SUSHI
+        veSUSHI.depositSushi(bag, address(this));
+        // Move timeline up
+        vm.warp(block.timestamp + 2 days);
+        // Check updated (prior) votes
+        assertEq(veSUSHI.getPriorVotes(address(this), block.timestamp - 1 days), bag);
+    }
+
+    function testDelegation() public {
+        // Check current delegation
+        assertEq(veSUSHI.delegates(address(this)), address(this));
+        assertEq(veSUSHI.delegates(alice), alice);
+        // Check current votes
+        assertEq(veSUSHI.getCurrentVotes(address(this)), 0);
+        assertEq(veSUSHI.getCurrentVotes(alice), 0);
+        // Move timeline up
+        vm.warp(block.timestamp + 2 days);
+        // Check current (prior) votes
+        assertEq(veSUSHI.getPriorVotes(address(this), block.timestamp - 1 days), 0);
+        assertEq(veSUSHI.getPriorVotes(alice, block.timestamp - 1 days), 0);
+        // Deposit SUSHI
+        veSUSHI.depositSushi(bag / 2, address(this));
+        veSUSHI.depositSushi(bag / 2, alice);
+        // Check current votes
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag / 2);
+        assertEq(veSUSHI.getCurrentVotes(alice), bag / 2);
+        // Move timeline up
+        vm.warp(block.timestamp + 2 days);
+        // Check updated (prior) votes
+        assertEq(veSUSHI.getPriorVotes(address(this), block.timestamp - 1 days), bag / 2);
+        assertEq(veSUSHI.getPriorVotes(alice, block.timestamp - 1 days), bag / 2);
+        // Delegate
+        veSUSHI.delegate(alice);
+        // Check updated votes
+        assertEq(veSUSHI.getCurrentVotes(address(this)), 0);
+        assertEq(veSUSHI.getCurrentVotes(alice), bag);
+        // Move timeline up
+        vm.warp(block.timestamp + 2 days);
+        // Check updated (prior) votes
+        assertEq(veSUSHI.getPriorVotes(address(this), block.timestamp - 1 days), 0);
+        assertEq(veSUSHI.getPriorVotes(alice, block.timestamp - 1 days), bag);
+    }
+
+    // Transfers
+
+    function testTransfer() public {
+        // Check veSUSHI balances
+        assertEq(veSUSHI.balanceOf(address(this)), 0);
+        assertEq(veSUSHI.balanceOf(alice), 0);
+        // Check veSUSHI Supply
+        assertEq(veSUSHI.totalSupply(), 0);
+        // Check current votes
+        assertEq(veSUSHI.getCurrentVotes(address(this)), 0);
+        assertEq(veSUSHI.getCurrentVotes(alice), 0);
+        // Deposit SUSHI
+        veSUSHI.depositSushi(bag, address(this));
+        // Check veSUSHI balances (confirm update)
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
+        assertEq(veSUSHI.balanceOf(alice), 0);
+        // Check veSUSHI Supply (confirm update)
+        assertEq(veSUSHI.totalSupply(), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag);
+        assertEq(veSUSHI.getCurrentVotes(alice), 0);
+        // Transfer veSUSHI
+        assertTrue(veSUSHI.transfer(alice, bag / 2));
+        // Check veSUSHI balances (confirm update)
+        assertEq(veSUSHI.balanceOf(address(this)), bag / 2);
+        assertEq(veSUSHI.balanceOf(alice), bag / 2);
+        // Check veSUSHI Supply (confirm no change)
+        assertEq(veSUSHI.totalSupply(), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag / 2);
+        assertEq(veSUSHI.getCurrentVotes(alice), bag / 2);
+        // Move timeline up
+        vm.warp(block.timestamp + 2 days);
+        // Check prior votes (confirm update)
+        assertEq(veSUSHI.getPriorVotes(address(this), block.timestamp - 1 days), bag / 2);
+        assertEq(veSUSHI.getPriorVotes(alice, block.timestamp - 1 days), bag / 2);
+        // Test underflow
+        vm.expectRevert(stdError.arithmeticError);
+        assertFalse(veSUSHI.transfer(alice, bag));
+        // Check veSUSHI Supply (confirm no change)
+        assertEq(veSUSHI.totalSupply(), bag);
+    }
+
+    function testTransferFrom() public {
+        // Check veSUSHI balances
+        assertEq(veSUSHI.balanceOf(address(this)), 0);
+        assertEq(veSUSHI.balanceOf(alice), 0);
+        // Check veSUSHI Supply
+        assertEq(veSUSHI.totalSupply(), 0);
+        // Check current votes
+        assertEq(veSUSHI.getCurrentVotes(address(this)), 0);
+        assertEq(veSUSHI.getCurrentVotes(alice), 0);
+        // Deposit SUSHI
+        veSUSHI.depositSushi(bag, address(this));
+        // Check veSUSHI balances (confirm update)
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
+        assertEq(veSUSHI.balanceOf(alice), 0);
+        // Check veSUSHI Supply (confirm update)
+        assertEq(veSUSHI.totalSupply(), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag);
+        assertEq(veSUSHI.getCurrentVotes(alice), 0);
+        // Approve veSUSHI spend
+        assertTrue(veSUSHI.approve(bob, bag / 2));
+        // Check approval
+        assertEq(veSUSHI.allowance(address(this), bob), bag / 2);
+        // Store 'this' in memory
+        address owner = address(this);
+        // TransferFrom veSUSHI
+        startHoax(bob, bob, type(uint256).max);
+        assertTrue(veSUSHI.transferFrom(owner, alice, bag / 2));
+        vm.stopPrank();
+        // Check approval (confirm update)
+        assertEq(veSUSHI.allowance(address(this), bob), 0);
+        // Check veSUSHI balances (confirm update)
+        assertEq(veSUSHI.balanceOf(address(this)), bag / 2);
+        assertEq(veSUSHI.balanceOf(alice), bag / 2);
+        // Check veSUSHI Supply (confirm no change)
+        assertEq(veSUSHI.totalSupply(), bag);
+        // Check current votes (confirm update)
+        assertEq(veSUSHI.getCurrentVotes(address(this)), bag / 2);
+        assertEq(veSUSHI.getCurrentVotes(alice), bag / 2);
+        // Move timeline up
+        vm.warp(block.timestamp + 2 days);
+        // Check prior votes (confirm update)
+        assertEq(veSUSHI.getPriorVotes(address(this), block.timestamp - 1 days), bag / 2);
+        assertEq(veSUSHI.getPriorVotes(alice, block.timestamp - 1 days), bag / 2);
+        // Test underflow
+        vm.expectRevert(stdError.arithmeticError);
+        assertFalse(veSUSHI.transfer(alice, bag));
+        // Check veSUSHI Supply (confirm no change)
+        assertEq(veSUSHI.totalSupply(), bag);
     }
 }
