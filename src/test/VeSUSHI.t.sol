@@ -11,10 +11,16 @@ import "@std/Test.sol";
 contract VeSUSHItest is Test {
     using stdStorage for StdStorage;
 
+    /// @dev Storage
+
     WETH wETH;
     MockERC20 sushi;
     VeSUSHI veSUSHI;
     // MockBentoBoxV1 bento;
+
+    uint256 constant bag = 1_000_000 ether;
+
+    /// @dev Events
 
     event VeSushiDeployed(ERC20 indexed sushi, address veSUSHI);
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
@@ -26,6 +32,8 @@ contract VeSUSHItest is Test {
         uint256 shares
     );
 
+    /// @dev Create testing suite
+
     function setUp() public {
         console.log(unicode"🧪 Testing veSUSHI...");
         wETH = new WETH();
@@ -33,10 +41,12 @@ contract VeSUSHItest is Test {
         veSUSHI = new VeSUSHI(sushi);
         // bento = new MockBentoBoxV1(address(wETH));
         // Mint 1 million SUSHI
-        sushi.mint(address(this), 1_000_000 ether);
+        sushi.mint(address(this), bag);
         // Approve deposit of 1 billion SUSHI
-        sushi.approve(address(veSUSHI), 1_000_000_000 ether);
+        sushi.approve(address(veSUSHI), bag * 1000);
     }
+
+    /// @dev Deployment
 
     function testSetUp() public {
         MockERC20 umai = new MockERC20("SushiToken", "SUSHI", 18);
@@ -57,17 +67,19 @@ contract VeSUSHItest is Test {
         assertEq(vlt.decimals(), 18);
     }
 
+    /// @dev Deposits
+
     function testDeposit() public {
         // Expect the Deposit event to be fired
         vm.expectEmit(true, true, true, true);
-        emit Deposit(address(this), address(this), 1_000_000 ether, 1_000_000 ether);
+        emit Deposit(address(this), address(this), bag, bag);
         // Deposit SUSHI
-        veSUSHI.depositSushi(1_000_000 ether, address(this));
+        veSUSHI.depositSushi(bag, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
     }
 
     function testDepositOverBalance() public {
@@ -75,7 +87,7 @@ contract VeSUSHItest is Test {
         vm.expectRevert(stdError.arithmeticError);
         veSUSHI.depositSushi(1_000_000_000 ether, address(this));
         // Check SUSHI balances
-        assertEq(sushi.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(this)), bag);
         assertEq(sushi.balanceOf(address(veSUSHI)), 0);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), 0);
@@ -84,14 +96,14 @@ contract VeSUSHItest is Test {
     function testMint() public {
         // Expect the Deposit event to be fired
         vm.expectEmit(true, true, true, true);
-        emit Deposit(address(this), address(this), 1_000_000 ether, 1_000_000 ether);
+        emit Deposit(address(this), address(this), bag, bag);
         // Mint veSUSHI
-        veSUSHI.mintVeSushi(1_000_000 ether, address(this));
+        veSUSHI.mintVeSushi(bag, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
     }
 
     function testMintOverBalance() public {
@@ -99,28 +111,30 @@ contract VeSUSHItest is Test {
         vm.expectRevert(stdError.arithmeticError);
         veSUSHI.mintVeSushi(1_000_000_000 ether, address(this));
         // Check SUSHI balances
-        assertEq(sushi.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(this)), bag);
         assertEq(sushi.balanceOf(address(veSUSHI)), 0);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), 0);
     }
 
+    /// @dev Withdrawals
+
     function testWithdraw() public {
         // ** DEPOSIT ** //
         // Expect the Deposit event to be fired
         vm.expectEmit(true, true, true, true);
-        emit Deposit(address(this), address(this), 1_000_000 ether, 1_000_000 ether);
+        emit Deposit(address(this), address(this), bag, bag);
         // Deposit SUSHI
-        veSUSHI.depositSushi(1_000_000 ether, address(this));
+        veSUSHI.depositSushi(bag, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
         // ** WITHDRAW ** //
-        veSUSHI.withdrawSushi(1_000_000 ether, address(this), address(this));
+        veSUSHI.withdrawSushi(bag, address(this), address(this));
         // Check SUSHI balances
-        assertEq(sushi.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(this)), bag);
         assertEq(sushi.balanceOf(address(veSUSHI)), 0);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), 0);
@@ -130,41 +144,41 @@ contract VeSUSHItest is Test {
         // ** DEPOSIT ** //
         // Expect the Deposit event to be fired
         vm.expectEmit(true, true, true, true);
-        emit Deposit(address(this), address(this), 1_000_000 ether, 1_000_000 ether);
+        emit Deposit(address(this), address(this), bag, bag);
         // Deposit SUSHI
-        veSUSHI.depositSushi(1_000_000 ether, address(this));
+        veSUSHI.depositSushi(bag, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
         // ** WITHDRAW ** //
         // Expect the withdrawSushi() call to revert from underflow
         vm.expectRevert(stdError.arithmeticError);
         veSUSHI.withdrawSushi(1_000_000_000 ether, address(this), address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
     }
 
     function testRedeem() public {
         // ** DEPOSIT ** //
         // Expect the Deposit event to be fired
         vm.expectEmit(true, true, true, true);
-        emit Deposit(address(this), address(this), 1_000_000 ether, 1_000_000 ether);
+        emit Deposit(address(this), address(this), bag, bag);
         // Deposit SUSHI
-        veSUSHI.depositSushi(1_000_000 ether, address(this));
+        veSUSHI.depositSushi(bag, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
         // ** REDEEM ** //
-        veSUSHI.redeemVeSushi(1_000_000 ether, address(this), address(this));
+        veSUSHI.redeemVeSushi(bag, address(this), address(this));
         // Check SUSHI balances
-        assertEq(sushi.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(this)), bag);
         assertEq(sushi.balanceOf(address(veSUSHI)), 0);
         // Check veSUSHI balance
         assertEq(veSUSHI.balanceOf(address(this)), 0);
@@ -174,22 +188,22 @@ contract VeSUSHItest is Test {
         // ** DEPOSIT ** //
         // Expect the Deposit event to be fired
         vm.expectEmit(true, true, true, true);
-        emit Deposit(address(this), address(this), 1_000_000 ether, 1_000_000 ether);
+        emit Deposit(address(this), address(this), bag, bag);
         // Deposit SUSHI
-        veSUSHI.depositSushi(1_000_000 ether, address(this));
+        veSUSHI.depositSushi(bag, address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
         // ** WITHDRAW ** //
         // Expect the redeemVeSushi() call to revert from underflow
         vm.expectRevert(stdError.arithmeticError);
         veSUSHI.redeemVeSushi(1_000_000_000 ether, address(this), address(this));
         // Check SUSHI balances
         assertEq(sushi.balanceOf(address(this)), 0);
-        assertEq(sushi.balanceOf(address(veSUSHI)), 1_000_000 ether);
+        assertEq(sushi.balanceOf(address(veSUSHI)), bag);
         // Check veSUSHI balance
-        assertEq(veSUSHI.balanceOf(address(this)), 1_000_000 ether);
+        assertEq(veSUSHI.balanceOf(address(this)), bag);
     }
 }
