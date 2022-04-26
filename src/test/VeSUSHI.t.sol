@@ -339,7 +339,7 @@ contract VeSUSHItest is Test {
         assertEq(veSUSHI.getPriorVotes(alice, block.timestamp - 1 days), bag / 2);
         // Test underflow
         vm.expectRevert(stdError.arithmeticError);
-        veSUSHI.transfer(alice, bag);
+        assertFalse(veSUSHI.transfer(alice, bag));
         // Check veSUSHI Supply (confirm no change)
         assertEq(veSUSHI.totalSupply(), bag);
     }
@@ -390,7 +390,7 @@ contract VeSUSHItest is Test {
         assertEq(veSUSHI.getPriorVotes(alice, block.timestamp - 1 days), bag / 2);
         // Test underflow
         vm.expectRevert(stdError.arithmeticError);
-        veSUSHI.transfer(alice, bag);
+        assertFalse(veSUSHI.transfer(alice, bag));
         // Check veSUSHI Supply (confirm no change)
         assertEq(veSUSHI.totalSupply(), bag);
     }
